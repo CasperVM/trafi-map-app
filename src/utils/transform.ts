@@ -8,14 +8,15 @@ export function fromEtrsToWgs84([x, y]: [number, number]): [number, number] {
     number,
     number
   ];
-  return [lat, lon];
+  //FIXME Depending on where this is used, return might need to be lat, lon or lon, lat!
+  return [lon, lat];
 }
 
 export function fromEtrsToWgs84Simplified(
   line: [number, number][]
 ): [number, number][] {
   // Simplify the tracks and reduce resolution
-  return toLatLngs(simplify(toPoints(line.map(fromEtrsToWgs84)), 0.0002));
+  return toLatLngs(simplify(toPoints(line.map(fromEtrsToWgs84)), 0.0001));
 }
 
 export const toPoints = (coords: [number, number][]) =>

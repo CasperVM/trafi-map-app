@@ -2,8 +2,10 @@ import React, { useEffect } from "react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { EnrichedTrain } from "../api/client";
 import { TrainMarker } from "./TrainMarker";
-import { TrackLines } from "./TrackLines";
+// import { TrackLines } from "./TrackLines";
 import L from "leaflet";
+import { VectorGridLayer } from "./VectorGridLayer";
+// import { VectorGridGeoJsonDemo, VectorGridGeoJsonLayer } from "./VectorGridGeoJsonDemo";
 interface TrainMapProps {
   trains: EnrichedTrain[];
   filter: "All" | "Commuter" | "Long-distance" | "Other";
@@ -26,6 +28,7 @@ export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
     <MapContainer
       center={[61.9241, 25.7482]}
       zoom={6}
+      maxZoom={19}
       className="flex-1"
       preferCanvas={true}
       renderer={L.canvas()}
@@ -34,8 +37,11 @@ export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
+        maxZoom={19}
       />
-      <TrackLines />
+      {/* <TrackLines /> */}
+      <VectorGridLayer />
+
       {visible.map((t) => (
         <TrainMarker
           key={`${t.properties.departureDate}#${t.properties.trainNumber}`}
@@ -43,5 +49,6 @@ export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
         />
       ))}
     </MapContainer>
+    // <VectorGridGeoJsonDemo/>
   );
 };
