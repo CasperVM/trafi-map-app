@@ -1,18 +1,29 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { useTrainComposition } from "../api/useTrainComposition";
 import { TrainPopup } from "./TrainPopup";
 import type { EnrichedTrain } from "../api/client";
+import type { FeatureCollection, MultiLineString, Point, Feature } from "geojson";
+import { snapToTrack } from "../utils/trackGeometry";
 
 interface TrainMarkerProps {
   train: EnrichedTrain;
+  trackGeoJson: FeatureCollection<MultiLineString> | null;
 }
 
-export const TrainMarker: React.FC<TrainMarkerProps> = ({ train }) => {
+export const TrainMarker: React.FC<TrainMarkerProps> = ({ train, trackGeoJson }) => {
   const markerRef = useRef<L.Marker>(null);
   const { details, fetchDetails } = useTrainComposition();
   const key = `${train.properties.departureDate}#${train.properties.trainNumber}`;
+
+  const [snappedLatLng, setSnappedLatLng] = useState<[number, number] | null>(null);
+  const [clicked, setClicked] = useState(false);
+
+  const defaultLatLng: [number, number] = [
+    train.geometry.coordinates[1],
+    train.geometry.coordinates[0],
+  ];
 
   const icon = useMemo(() => {
     let markerColor = "#ff0000";
@@ -65,17 +76,36 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({ train }) => {
       z-index: 0;
     `;
 
-    // <span style="${triangleStyles}"></span>
     return L.divIcon({
       className: "my-custom-pin",
       iconAnchor: [0, size * 8],
       popupAnchor: [0, -size * 12],
-      html: ` <span style="${markerHtmlStyle}">    
+      html: `<span style="${markerHtmlStyle}">
               <span style="${triangleStyle}"></span>
               <span style="${triangleBorderStyle}"></span>
             </span>`,
     });
-  }, []);
+  }, [train.category]);
+
+  // snap when marker is clicked
+  useEffect(() => {
+    if (clicked && !snappedLatLng && trackGeoJson) {
+      const pt: Feature<Point> = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: train.geometry.coordinates,
+        },
+        properties: {},
+      };
+
+      const snapped = snapToTrack(trackGeoJson, pt);
+      setSnappedLatLng([
+        snapped.geometry.coordinates[1],
+        snapped.geometry.coordinates[0],
+      ]);
+    }
+  }, [clicked, snappedLatLng, trackGeoJson, train.geometry.coordinates]);
 
   useEffect(() => {
     if (details[key] && markerRef.current) {
@@ -86,13 +116,12 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({ train }) => {
   return (
     <Marker
       ref={markerRef}
-      position={[train.geometry.coordinates[1], train.geometry.coordinates[0]]}
+      position={snappedLatLng ?? defaultLatLng}
       eventHandlers={{
-        click: () =>
-          fetchDetails(
-            train.properties.departureDate,
-            train.properties.trainNumber
-          ),
+        click: () => {
+          setClicked(true);
+          fetchDetails(train.properties.departureDate, train.properties.trainNumber);
+        },
       }}
       icon={icon}
     >

@@ -5,6 +5,7 @@ import { TrainMarker } from "./TrainMarker";
 // import { TrackLines } from "./TrackLines";
 import L from "leaflet";
 import { TrackLinesAsVectorGridLayer } from "./TrackLinesAsVectorGridLayer";
+import { useTrackLocations } from "../api/useTrackLocations";
 // import { VectorGridGeoJsonDemo, VectorGridGeoJsonLayer } from "./VectorGridGeoJsonDemo";
 interface TrainMapProps {
   trains: EnrichedTrain[];
@@ -20,9 +21,12 @@ const InvalidateOnMount = () => {
 };
 
 export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
+  const { data: tracks, isLoading } = useTrackLocations();
   const visible = trains.filter((t) =>
     filter === "All" ? true : t.category === filter
   );
+
+  if (isLoading || !tracks) return <div>Loading map...</div>;
 
   return (
     <MapContainer
@@ -40,12 +44,13 @@ export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
         maxZoom={19}
       />
       {/* <TrackLines /> */}
-      <TrackLinesAsVectorGridLayer />
+      <TrackLinesAsVectorGridLayer trackGeoJson={tracks} />
 
       {visible.map((t) => (
         <TrainMarker
           key={`${t.properties.departureDate}#${t.properties.trainNumber}`}
           train={t}
+          trackGeoJson={tracks}
         />
       ))}
     </MapContainer>
