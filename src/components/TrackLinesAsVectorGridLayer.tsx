@@ -5,10 +5,13 @@ import L from "leaflet";
 import "leaflet.vectorgrid";
 import { fromEtrsToWgs84Simplified } from "../utils/transform";
 
+// FIXME: figure out what the time param needs, seems to be utc?...
 const TRACKS_URL =
   "https://rata.digitraffic.fi/infra-api/0.8/14817/raiteet.geojson?" +
   "propertyName=geometria,kuvaus,sahkoistetty,tunnus,tunniste&" +
-  "time=2025-05-13T09:00:00Z/2025-05-13T09:00:00Z";
+  `time=${new Date().toISOString().slice(0, 19)}Z/${new Date()
+    .toISOString()
+    .slice(0, 19)}Z`;
 
 async function fetchAndReprojectTracks(): Promise<GeoJSON.FeatureCollection> {
   const res = await fetch(TRACKS_URL);
@@ -31,7 +34,7 @@ async function fetchAndReprojectTracks(): Promise<GeoJSON.FeatureCollection> {
   };
 }
 
-export const VectorGridLayer: React.FC = () => {
+export const TrackLinesAsVectorGridLayer: React.FC = () => {
   const map = useMap();
 
   useEffect(() => {

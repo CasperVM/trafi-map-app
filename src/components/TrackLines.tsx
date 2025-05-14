@@ -14,6 +14,7 @@ interface TrackFeature {
   };
 }
 
+// TODO: remove?
 export const TrackLines = () => {
   const [tracks, setTracks] = useState<TrackFeature[]>([]);
 

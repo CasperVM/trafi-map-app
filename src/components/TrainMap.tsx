@@ -4,7 +4,7 @@ import type { EnrichedTrain } from "../api/client";
 import { TrainMarker } from "./TrainMarker";
 // import { TrackLines } from "./TrackLines";
 import L from "leaflet";
-import { VectorGridLayer } from "./VectorGridLayer";
+import { TrackLinesAsVectorGridLayer } from "./TrackLinesAsVectorGridLayer";
 // import { VectorGridGeoJsonDemo, VectorGridGeoJsonLayer } from "./VectorGridGeoJsonDemo";
 interface TrainMapProps {
   trains: EnrichedTrain[];
@@ -40,7 +40,7 @@ export const TrainMap: React.FC<TrainMapProps> = ({ trains, filter }) => {
         maxZoom={19}
       />
       {/* <TrackLines /> */}
-      <VectorGridLayer />
+      <TrackLinesAsVectorGridLayer />
 
       {visible.map((t) => (
         <TrainMarker

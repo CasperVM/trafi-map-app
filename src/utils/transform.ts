@@ -16,7 +16,7 @@ export function fromEtrsToWgs84Simplified(
   line: [number, number][]
 ): [number, number][] {
   // Simplify the tracks and reduce resolution
-  return toLatLngs(simplify(toPoints(line.map(fromEtrsToWgs84)), 0.0001));
+  return toLatLngs(simplify(toPoints(line.map(fromEtrsToWgs84)), 0.00001));
 }
 
 export const toPoints = (coords: [number, number][]) =>
