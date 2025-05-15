@@ -10,7 +10,7 @@ import type {
   Point,
   Feature,
 } from "geojson";
-import { snapToTrack } from "../utils/trackGeometry";
+import { computeHeading, snapToTrack } from "../utils/trackGeometry";
 
 interface TrainMarkerProps {
   train: EnrichedTrain;
@@ -28,6 +28,7 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
   const [snappedLatLng, setSnappedLatLng] = useState<[number, number] | null>(
     null
   );
+  const [heading, setHeading] = useState<number | null>(null);
   const [clicked, setClicked] = useState(false);
 
   const defaultLatLng: [number, number] = [
@@ -42,6 +43,31 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
     } else if (train.category === "Commuter") {
       markerColor = "#00ff00";
     }
+
+    // once clicked and heading is known -> show a triangle arrow
+    if (clicked && heading !== null && heading != 0) {
+      const pixelWidth = 24;
+      const pixelHeight = 36;
+      const color = markerColor;
+
+      return L.divIcon({
+        className: "",
+        iconSize: [pixelWidth, pixelHeight],
+        iconAnchor: [pixelWidth / 2, pixelHeight], // bottom center of triangle
+        html: `
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: ${pixelWidth / 2}px solid transparent;
+            border-right: ${pixelWidth / 2}px solid transparent;
+            border-bottom: ${pixelHeight}px solid ${color};
+            transform: rotate(${heading}deg);
+            transform-origin: center bottom;
+          "></div>
+        `,
+      });
+    }
+
     const size = 3;
     const halfSize = size / 2;
     const triangleSideSize = size / 3.75;
@@ -95,11 +121,11 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
               <span style="${triangleBorderStyle}"></span>
             </span>`,
     });
-  }, [train.category]);
+  }, [train.category, heading, clicked]);
 
   // snap when marker is clicked
   useEffect(() => {
-    if (!clicked || !trackGeoJson) return;
+    if (!clicked || !trackGeoJson || !train.geometry.coordinates) return;
 
     const pt: Feature<Point> = {
       type: "Feature",
@@ -123,7 +149,33 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
     ) {
       setSnappedLatLng(newLatLng);
     }
-  }, [clicked, trackGeoJson, train.geometry.coordinates, snappedLatLng]);
+
+    if (train.lastGeometry) {
+      let hd: number | null = null;
+      const prevPt: Feature<Point> = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: train.lastGeometry.coordinates,
+        },
+        properties: {},
+      };
+      const snappedPrev = snapToTrack(trackGeoJson, prevPt);
+      hd = computeHeading(snappedPrev, snapped);
+
+      if (hd !== heading) {
+        // console.log(train)
+        // console.log(hd)
+        setHeading(hd);
+      }
+    }
+  }, [
+    clicked,
+    trackGeoJson,
+    train.geometry.coordinates,
+    snappedLatLng,
+    heading,
+  ]);
 
   useEffect(() => {
     if (details[key] && markerRef.current) {
