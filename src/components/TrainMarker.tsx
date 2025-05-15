@@ -10,7 +10,13 @@ import type {
   Point,
   Feature,
 } from "geojson";
-import { computeHeading, snapToTrack } from "../utils/trackGeometry";
+import {
+  computeHeading,
+  snapToTrack,
+  rectangleCorners,
+} from "../utils/trackGeometry";
+import { Polygon } from "react-leaflet";
+import { destination } from "@turf/turf";
 
 interface TrainMarkerProps {
   train: EnrichedTrain;
@@ -30,6 +36,12 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
   );
   const [heading, setHeading] = useState<number | null>(null);
   const [clicked, setClicked] = useState(false);
+  const [rectangleCoords, setRectangleCoords] = useState<[number, number][]>(
+    []
+  );
+  const [wagonsPolygons, setWagonsPolygons] = useState<[number, number][][]>(
+    []
+  );
 
   const defaultLatLng: [number, number] = [
     train.geometry.coordinates[1],
@@ -45,7 +57,7 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
     }
 
     // once clicked and heading is known -> show a triangle arrow
-    if (clicked && heading !== null && heading != 0) {
+    if (clicked && heading !== null) {
       const pixelWidth = 24;
       const pixelHeight = 36;
       const color = markerColor;
@@ -163,10 +175,51 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
       const snappedPrev = snapToTrack(trackGeoJson, prevPt);
       hd = computeHeading(snappedPrev, snapped);
 
-      if (hd !== heading) {
+      if (hd !== heading && hd !== 0) {
         // console.log(train)
         // console.log(hd)
         setHeading(hd);
+
+        const halfLengthKm = 0.04;
+        const halfWidthKm = 0.005;
+        const wagonGapKm = 0.003;
+
+        // 'Locomotive'
+        const rect = rectangleCorners(snapped, hd, halfLengthKm, halfWidthKm);
+        setRectangleCoords(rect);
+
+        // Wagons
+        const comp = details[key];
+        if (comp?.journeySections?.[0]?.wagons) {
+          const wagons = comp.journeySections[0].wagons;
+
+          let cumulativeKm = -0.025;
+
+          const polygons = wagons.map((w) => {
+            const wagonLengthKm = w.length / 1000_00;
+            // add a gap before this wagon
+            cumulativeKm += wagonLengthKm * 3 + wagonGapKm * 2;
+
+            // build a point feature advanced backwards along track
+            // use turf.destination on snapped point with bearing+180
+            const backCenter = destination(
+              snapped as any,
+              cumulativeKm,
+              hd + 180,
+              { units: "kilometers" }
+            );
+            // snap it to track.
+            const snappedCenter = snapToTrack(trackGeoJson, backCenter as any);
+            const corners = rectangleCorners(
+              snappedCenter as any,
+              hd,
+              halfLengthKm,
+              halfWidthKm
+            );
+            return corners;
+          });
+          setWagonsPolygons(polygons);
+        }
       }
     }
   }, [
@@ -198,6 +251,29 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({
       }}
       icon={icon}
     >
+      {/* Debug for locomotive; */}
+      {/* {rectangleCoords.length > 0 && (
+        <Polygon
+          positions={rectangleCoords.map(([lng, lat]) => [lat, lng])}
+          pathOptions={{ color: "white", weight: 1, opacity: 1 }}
+        />
+      )} */}
+
+      {/* one polygon per wagon */}
+      {wagonsPolygons.map((corners, i) => (
+        <Polygon
+          key={i}
+          positions={corners.map(([lng, lat]) => [lat, lng])}
+          pathOptions={{
+            color: "red",
+            weight: 1,
+            opacity: 1,
+            fillColor: "white",
+            fillOpacity: 0.7,
+          }}
+        />
+      ))}
+
       <Popup autoPan={false}>
         <TrainPopup train={train} composition={details[key]} />
       </Popup>
