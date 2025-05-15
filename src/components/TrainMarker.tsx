@@ -4,7 +4,12 @@ import L from "leaflet";
 import { useTrainComposition } from "../api/useTrainComposition";
 import { TrainPopup } from "./TrainPopup";
 import type { EnrichedTrain } from "../api/client";
-import type { FeatureCollection, MultiLineString, Point, Feature } from "geojson";
+import type {
+  FeatureCollection,
+  MultiLineString,
+  Point,
+  Feature,
+} from "geojson";
 import { snapToTrack } from "../utils/trackGeometry";
 
 interface TrainMarkerProps {
@@ -12,12 +17,17 @@ interface TrainMarkerProps {
   trackGeoJson: FeatureCollection<MultiLineString> | null;
 }
 
-export const TrainMarker: React.FC<TrainMarkerProps> = ({ train, trackGeoJson }) => {
+export const TrainMarker: React.FC<TrainMarkerProps> = ({
+  train,
+  trackGeoJson,
+}) => {
   const markerRef = useRef<L.Marker>(null);
   const { details, fetchDetails } = useTrainComposition();
   const key = `${train.properties.departureDate}#${train.properties.trainNumber}`;
 
-  const [snappedLatLng, setSnappedLatLng] = useState<[number, number] | null>(null);
+  const [snappedLatLng, setSnappedLatLng] = useState<[number, number] | null>(
+    null
+  );
   const [clicked, setClicked] = useState(false);
 
   const defaultLatLng: [number, number] = [
@@ -89,23 +99,31 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({ train, trackGeoJson })
 
   // snap when marker is clicked
   useEffect(() => {
-    if (clicked && !snappedLatLng && trackGeoJson) {
-      const pt: Feature<Point> = {
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: train.geometry.coordinates,
-        },
-        properties: {},
-      };
+    if (!clicked || !trackGeoJson) return;
 
-      const snapped = snapToTrack(trackGeoJson, pt);
-      setSnappedLatLng([
-        snapped.geometry.coordinates[1],
-        snapped.geometry.coordinates[0],
-      ]);
+    const pt: Feature<Point> = {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: train.geometry.coordinates,
+      },
+      properties: {},
+    };
+    const snapped = snapToTrack(trackGeoJson, pt);
+    const newLatLng: [number, number] = [
+      snapped.geometry.coordinates[1],
+      snapped.geometry.coordinates[0],
+    ];
+
+    // only update if the snapped coords actually changed
+    if (
+      !snappedLatLng ||
+      snappedLatLng[0] !== newLatLng[0] ||
+      snappedLatLng[1] !== newLatLng[1]
+    ) {
+      setSnappedLatLng(newLatLng);
     }
-  }, [clicked, snappedLatLng, trackGeoJson, train.geometry.coordinates]);
+  }, [clicked, trackGeoJson, train.geometry.coordinates, snappedLatLng]);
 
   useEffect(() => {
     if (details[key] && markerRef.current) {
@@ -120,7 +138,10 @@ export const TrainMarker: React.FC<TrainMarkerProps> = ({ train, trackGeoJson })
       eventHandlers={{
         click: () => {
           setClicked(true);
-          fetchDetails(train.properties.departureDate, train.properties.trainNumber);
+          fetchDetails(
+            train.properties.departureDate,
+            train.properties.trainNumber
+          );
         },
       }}
       icon={icon}

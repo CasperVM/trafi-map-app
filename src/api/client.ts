@@ -7,6 +7,7 @@ export const MQTT_PORT = 443;
 
 export type TrainLocation = {
     geometry: { coordinates: [number, number] };
+    lastGeometry: { coordinates: [number, number] } | null;
     properties: {
       trainNumber: number;
       departureDate: string;
